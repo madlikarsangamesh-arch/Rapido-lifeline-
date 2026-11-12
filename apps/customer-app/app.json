@@ -1,0 +1,36 @@
+
+{
+  "expo": {
+    "name": "Rapid Lifeline",
+    "slug": "rapid-lifeline-customer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "rapidlifeline",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B7D43"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.rapidlifeline.customer"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B7D43"
+      },
+      "package": "com.rapidlifeline.customer"
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

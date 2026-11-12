@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Rapid Lifeline Driver",
+    "slug": "rapid-lifeline-driver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "rapidlifelinedriver",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0B7D43"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.rapidlifeline.driver"
+    },
+    "android": {
+      "package": "com.rapidlifeline.driver"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Rapid Lifeline Driver to share device GPS while you are actively sharing an assigned trip."
+        }
+      ]
+    ]
+  }
+}

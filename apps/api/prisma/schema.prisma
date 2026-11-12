@@ -1,0 +1,540 @@
+// Prisma Schema for Rapid Lifeline
+// Source of truth: Rapid Lifeline Tech Stack & Architecture (Section 4)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  rider
+  driver
+  hospital_staff
+  operator
+  admin
+  super_admin
+}
+
+enum EntityStatus {
+  pending
+  approved
+  suspended
+  rejected
+}
+
+enum TripState {
+  requested
+  searching
+  assigned
+  arriving
+  picked_up
+  en_route
+  arrived
+  completed
+  cancelled
+  no_driver
+}
+
+enum PaymentMethod {
+  upi
+  card
+  wallet
+  cash
+}
+
+enum PaymentStatus {
+  pending
+  captured
+  failed
+  refunded
+}
+
+enum OfferResult {
+  accepted
+  declined
+  timeout
+}
+
+enum AlertStatus {
+  sent
+  accepted
+  declined
+  timed_out
+}
+
+model User {
+  id              String           @id @default(uuid())
+  phone           String?          @unique
+  name            String?
+  role            Role             @default(rider)
+  language        String           @default("en")
+  largeText       Boolean          @default(false) @map("large_text")
+  lowData         Boolean          @default(false) @map("low_data")
+  isGuest         Boolean          @default(false) @map("is_guest")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  refreshTokens   RefreshToken[]
+  trustedContacts TrustedContact[]
+  driver          Driver?
+  hospitalStaff   HospitalStaff[]
+  bookings        Booking[]
+  ratingsGiven    Rating[]         @relation("RatingsGiven")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id                 String    @id @default(uuid())
+  userId             String    @map("user_id")
+  tokenHash          String    @unique @map("token_hash")
+  tokenFamilyId      String    @map("token_family_id")
+  deviceId           String?   @map("device_id")
+  expiresAt          DateTime  @map("expires_at")
+  revokedAt          DateTime? @map("revoked_at")
+  replacedByTokenId  String?   @map("replaced_by_token_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model TrustedContact {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  phone     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("trusted_contacts")
+}
+
+model Operator {
+  id            String       @id @default(uuid())
+  name          String
+  contactPhone  String       @map("contact_phone")
+  status        EntityStatus @default(pending)
+  commissionBps Int          @default(1200) @map("commission_bps") // 12%
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  drivers       Driver[]
+  vehicles      Vehicle[]
+
+  @@map("operators")
+}
+
+model Driver {
+  id             String                @id @default(uuid())
+  userId         String                @unique @map("user_id")
+  operatorId     String                @map("operator_id")
+  licenseNo      String                @map("license_no")
+  photoUrl       String?               @map("photo_url")
+  status         EntityStatus          @default(pending)
+  isOnline       Boolean               @default(false) @map("is_online")
+  ratingAvg      Decimal               @default(5.0) @db.Decimal(3, 2) @map("rating_avg")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  user           User                  @relation(fields: [userId], references: [id])
+  operator       Operator              @relation(fields: [operatorId], references: [id])
+  shifts         DriverVehicleShift[]
+  trips          Trip[]
+  offers         DispatchOffer[]
+  locations      TripLocation[]
+
+  @@index([operatorId])
+  @@map("drivers")
+}
+
+model Vehicle {
+  id              String               @id @default(uuid())
+  operatorId      String               @map("operator_id")
+  plate           String               @unique
+  categoryId      String               @map("category_id")
+  isLarge         Boolean              @default(false) @map("is_large")
+  equipment       Json                 @default("[]")
+  status          EntityStatus         @default(pending)
+  insuranceExpiry DateTime             @map("insurance_expiry")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  operator        Operator             @relation(fields: [operatorId], references: [id])
+  category        Category             @relation(fields: [categoryId], references: [id])
+  shifts          DriverVehicleShift[]
+  trips           Trip[]
+
+  @@index([operatorId])
+  @@index([categoryId])
+  @@map("vehicles")
+}
+
+model DriverVehicleShift {
+  id        String    @id @default(uuid())
+  driverId  String    @map("driver_id")
+  vehicleId String    @map("vehicle_id")
+  startedAt DateTime  @default(now()) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  driver    Driver    @relation(fields: [driverId], references: [id])
+  vehicle   Vehicle   @relation(fields: [vehicleId], references: [id])
+
+  @@index([driverId])
+  @@index([vehicleId])
+  @@map("driver_vehicle_shifts")
+}
+
+model Document {
+  id         String       @id @default(uuid())
+  ownerType  String       @map("owner_type") // driver, vehicle, operator
+  ownerId    String       @map("owner_id")
+  kind       String       // license, rc, insurance, fitness
+  s3Key      String       @map("s3_key")
+  status     EntityStatus @default(pending)
+  reviewedBy String?      @map("reviewed_by")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  @@index([ownerType, ownerId])
+  @@map("documents")
+}
+
+model Category {
+  id            String     @id @default(uuid())
+  code          String     @unique // BLS, ALS, ICU, PT, NEO
+  nameEn        String     @map("name_en")
+  nameKn        String     @map("name_kn")
+  descriptionEn String     @map("description_en")
+  descriptionKn String     @map("description_kn")
+  sortOrder     Int        @default(0) @map("sort_order")
+  stripeColor   String     @map("stripe_color")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  fareRules     FareRule[]
+  vehicles      Vehicle[]
+  bookings      Booking[]
+
+  @@map("categories")
+}
+
+model FareRule {
+  id              String   @id @default(uuid())
+  categoryId      String   @map("category_id")
+  basePaise       Int      @map("base_paise")
+  baseKm          Int      @default(5) @map("base_km")
+  perKmPaise      Int      @map("per_km_paise")
+  waitPerMinPaise Int      @default(500) @map("wait_per_min_paise")
+  nightPct        Int      @default(20) @map("night_pct")
+  version         Int      @default(1)
+  activeFrom      DateTime @default(now()) @map("active_from")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  category        Category @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
+  @@map("fare_rules")
+}
+
+model Hospital {
+  id                String          @id @default(uuid())
+  name              String
+  address           String
+  lat               Float
+  lng               Float
+  phone             String
+  erOpen            Boolean         @default(true) @map("er_open")
+  isVerified        Boolean         @default(false) @map("is_verified")
+  specialties       String[]        @default([])
+  capacityNote      String?         @map("capacity_note")
+  capacityUpdatedAt DateTime?       @map("capacity_updated_at")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  staff             HospitalStaff[]
+  bookings          Booking[]
+  alerts            HospitalAlert[]
+
+  @@index([lat, lng])
+  @@map("hospitals")
+}
+
+model HospitalStaff {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  hospitalId String   @map("hospital_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user       User     @relation(fields: [userId], references: [id])
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+
+  @@unique([userId, hospitalId])
+  @@map("hospital_staff")
+}
+
+model Booking {
+  id             String        @id @default(uuid())
+  riderId        String        @map("rider_id")
+  forOther       Boolean       @default(false) @map("for_other")
+  patientName    String?       @map("patient_name")
+  patientPhone   String?       @map("patient_phone")
+  categoryId     String        @map("category_id")
+  pickupLat      Float         @map("pickup_lat")
+  pickupLng      Float         @map("pickup_lng")
+  pickupAddress  String        @map("pickup_address")
+  hospitalId     String        @map("hospital_id")
+  quoteMinPaise  Int?          @map("quote_min_paise")
+  quoteMaxPaise  Int?          @map("quote_max_paise")
+  paymentMethod  PaymentMethod @default(cash) @map("payment_method")
+  consentSummary Boolean       @default(false) @map("consent_summary")
+  patientSummary String?       @map("patient_summary")
+  scheduledFor   DateTime?     @map("scheduled_for")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  rider          User          @relation(fields: [riderId], references: [id])
+  category       Category      @relation(fields: [categoryId], references: [id])
+  hospital       Hospital      @relation(fields: [hospitalId], references: [id])
+  trip           Trip?
+
+  @@index([riderId])
+  @@index([categoryId])
+  @@index([hospitalId])
+  @@map("bookings")
+}
+
+model Trip {
+  id             String          @id @default(uuid())
+  bookingId      String          @unique @map("booking_id")
+  driverId       String?         @map("driver_id")
+  vehicleId      String?         @map("vehicle_id")
+  state          TripState       @default(requested)
+  assignedAt     DateTime?       @map("assigned_at")
+  pickedUpAt     DateTime?       @map("picked_up_at")
+  arrivedAt      DateTime?       @map("arrived_at")
+  completedAt    DateTime?       @map("completed_at")
+  distanceM      Int?            @map("distance_m")
+  finalPaise     Int?            @map("final_paise")
+  cancelReason   String?         @map("cancel_reason")
+  cancelFeePaise Int?            @map("cancel_fee_paise")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  booking        Booking         @relation(fields: [bookingId], references: [id])
+  driver         Driver?         @relation(fields: [driverId], references: [id])
+  vehicle        Vehicle?        @relation(fields: [vehicleId], references: [id])
+  events         TripEvent[]
+  locations      TripLocation[]
+  offers         DispatchOffer[]
+  routes         Route[]
+  trackingLinks  TrackingLink[]
+  hospitalAlerts HospitalAlert[]
+  payments       Payment[]
+  ratings        Rating[]
+
+  @@index([driverId])
+  @@index([state])
+  @@map("trips")
+}
+
+model TripEvent {
+  id        String    @id @default(uuid())
+  tripId    String    @map("trip_id")
+  state     TripState
+  actorId   String?   @map("actor_id")
+  payload   Json?
+  at        DateTime  @default(now())
+
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, at])
+  @@map("trip_events")
+}
+
+model TripLocation {
+  id         String   @id @default(uuid())
+  tripId     String   @map("trip_id")
+  driverId   String   @map("driver_id")
+  lat        Float
+  lng        Float
+  speedKmh   Float    @map("speed_kmh")
+  heading    Float
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  trip       Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  driver     Driver   @relation(fields: [driverId], references: [id])
+
+  @@index([tripId, recordedAt])
+  @@map("trip_locations")
+}
+
+model DispatchOffer {
+  id          String      @id @default(uuid())
+  tripId      String      @map("trip_id")
+  driverId    String      @map("driver_id")
+  offeredAt   DateTime    @default(now()) @map("offered_at")
+  respondedAt DateTime?   @map("responded_at")
+  result      OfferResult?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  trip        Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  driver      Driver      @relation(fields: [driverId], references: [id])
+
+  @@index([tripId])
+  @@index([driverId])
+  @@map("dispatch_offers")
+}
+
+model Route {
+  id                String   @id @default(uuid())
+  tripId            String   @map("trip_id")
+  leg               String   // to_pickup, to_hospital
+  polyline          String
+  distanceM         Int      @map("distance_m")
+  durationS         Int      @map("duration_s")
+  trafficDurationS  Int      @map("traffic_duration_s")
+  version           Int      @default(1)
+  computedAt        DateTime @default(now()) @map("computed_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  trip              Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@map("routes")
+}
+
+model TrackingLink {
+  id        String    @id @default(uuid())
+  tripId    String    @map("trip_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([tripId])
+  @@map("tracking_links")
+}
+
+model HospitalAlert {
+  id          String      @id @default(uuid())
+  tripId      String      @map("trip_id")
+  hospitalId  String      @map("hospital_id")
+  status      AlertStatus @default(sent)
+  sentAt      DateTime    @default(now()) @map("sent_at")
+  respondedAt DateTime?   @map("responded_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  trip        Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  hospital    Hospital    @relation(fields: [hospitalId], references: [id])
+
+  @@index([tripId])
+  @@index([hospitalId])
+  @@map("hospital_alerts")
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  tripId           String        @map("trip_id")
+  method           PaymentMethod
+  status           PaymentStatus @default(pending)
+  amountPaise      Int           @map("amount_paise")
+  razorpayOrderId  String?       @map("razorpay_order_id")
+  razorpayPaymentId String?      @map("razorpay_payment_id")
+  settledAt        DateTime?     @map("settled_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  trip             Trip          @relation(fields: [tripId], references: [id])
+
+  @@index([tripId])
+  @@map("payments")
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  tripId    String   @map("trip_id")
+  raterId   String   @map("rater_id")
+  stars     Int
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  trip      Trip     @relation(fields: [tripId], references: [id])
+  rater     User     @relation("RatingsGiven", fields: [raterId], references: [id])
+
+  @@index([tripId])
+  @@map("ratings")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  recipient String   // user_id or phone
+  channel   String   // push, sms
+  template  String
+  status    String   // sent, failed
+  sentAt    DateTime @default(now()) @map("sent_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([recipient])
+  @@map("notifications")
+}
+
+// Append-only audit log: deliberately NO updatedAt per Tech Stack spec
+model AuditLog {
+  id       String   @id @default(uuid())
+  actorId  String?  @map("actor_id")
+  action   String
+  entity   String
+  entityId String?  @map("entity_id")
+  diff     Json?
+  at       DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([at])
+  @@map("audit_logs")
+}
+
+model AvoidZone {
+  id             String   @id @default(uuid())
+  name           String
+  active         Boolean  @default(true)
+  createdBy      String?  @map("created_by")
+  polygonGeojson Json     @map("polygon_geojson")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("avoid_zones")
+}
+
+model FeatureFlag {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("feature_flags")
+}

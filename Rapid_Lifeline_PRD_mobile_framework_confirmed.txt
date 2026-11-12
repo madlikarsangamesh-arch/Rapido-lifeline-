@@ -1,0 +1,807 @@
+Rapid Lifeline — PRD v1.1 (Final amendment to v1.0)
+10 Nov 2026 · @Iam Srm
+Rapid Lifeline gets a patient from one booking tap to the right hospital's emergency door, with the family watching live. Every decision below is settled; nothing is left open for the coding agent.
+1. Overview and settled decisions
+Rapid Lifeline is an on-demand ambulance booking product for Bengaluru, launching with English and Kannada, where a patient or bystander books in 3 taps, is matched to the right hospital, and the family tracks the trip live. The receiving hospital is a first-class user and is alerted before the patient arrives.
+Item
+Final decision
+Product name
+Rapid Lifeline (final for v1; used in all UI, code and store listings)
+Launch city
+Bengaluru, Karnataka, India
+Languages
+English and Kannada
+Currency, time zone, phone
+INR (₹), IST (UTC+05:30), +91 numbers
+Service boundary
+Private ambulance coordination platform; not a government emergency response service and does not replace public emergency services
+Platforms
+Customer app and driver app on Android 8.0+ and iOS 15+; both mobile apps are built with React Native + Expo; web for operator, hospital and super admin dashboards and the public family tracking page
+Five interfaces
+Customer app, driver app, operator dashboard, hospital dashboard, super admin dashboard
+Supply model
+Verified partner operators only; Rapid Lifeline owns no ambulances
+Ambulance categories at launch
+BLS, ALS, ICU, Patient Transport, Neonatal (five)
+Payments
+UPI, cards and wallets through Razorpay, plus cash
+Document status
+Final v1.1, ready for build; product behaviour amended as recorded in the change history
+Launch fare card (defaults, editable by super admin)
+Category
+Base fare (first 5 km)
+Per km after 5 km
+Waiting after 10 min
+BLS
+₹1,200
+₹25
+₹5 per min
+ALS
+₹2,500
+₹40
+₹5 per min
+ICU
+₹4,500
+₹60
+₹5 per min
+Patient Transport
+₹800
+₹18
+₹5 per min
+Neonatal
+₹3,500
+₹50
+₹5 per min
+A 20% night surcharge applies from 22:00 to 06:00 IST. These are launch defaults chosen for build; the fare card lives in the database so changing a price needs no code change.
+2. Problem and goals
+In an emergency, families lose minutes on problems software can remove. These six pain points drive every feature; each has one product answer.
+Pain point
+Who feels it
+Product answer
+Not knowing which ambulance type is needed
+Patient, family
+Guided booking with ambulance categories
+Unsure which hospital is nearest, open or equipped
+Patient, family, driver
+Smart Hospital Finder
+No visibility after booking
+Family
+Live GPS and family tracking
+Traffic delays and wrong turns
+Driver, patient
+Smart traffic navigation and automatic re-routing
+Hospital learns of the patient only at the door
+Hospital ER staff
+Pre-arrival alert with ETA and patient summary
+Panic makes long forms unusable
+Patient, bystander
+3-tap booking flow
+Goals
+#
+Goal
+Measured by (target in section 9)
+G1
+Cut time from booking to ambulance arrival
+Median arrival time
+G2
+Match every patient to a suitable, open, nearby hospital
+Hospital suggestion acceptance
+G3
+Give families live, shareable visibility
+Share rate and link open speed
+G4
+Keep the ambulance on the fastest safe route
+Re-route latency and ETA accuracy
+G5
+Prepare the receiving hospital before arrival
+Pre-arrival alert delivery
+Non-goals for v1
+• Medical diagnosis or treatment advice in the app. The triage question only suggests BLS or ALS.
+• Running our own ambulance fleet.
+• Air ambulance, inter-city transfers and mortuary or freezer vans.
+• Insurance claims, billing disputes and telemedicine.
+• Integration with city traffic-signal systems.
+• Providing government emergency response or replacing public emergency services.
+3. Users and the five interfaces
+Six user groups touch the product. Each is served by exactly one interface (the family member uses a public web page, which is part of the web app and not a sixth interface).
+Persona
+Who they are
+Primary need
+Interface
+Patient or booker
+Person in need, or a bystander booking for someone
+Book fast, one-handed, under stress
+Customer app
+Family member
+Relative following the trip, often in another city
+Where is the patient, when do they arrive
+Tracking link (web page, no login) or customer app
+Ambulance driver
+Licensed driver of a partner ambulance
+Clear job, best route, no distractions
+Driver app
+Paramedic or EMT
+Onboard medical staff
+Patient details and hospital readiness
+Driver app, crew mode
+Hospital ER coordinator
+Staff who receive the patient
+Early warning, ETA, patient summary
+Hospital dashboard
+Operator
+Fleet owner who supplies vehicles
+Fleet status, earnings, drivers
+Operator dashboard
+Super admin and support
+Rapid Lifeline operations team
+Onboarding, verification, disputes, fare card
+Super admin dashboard
+Primary persona is Asha, a patient's daughter who books for her father at night, in a panic, on a mid-range Android phone with patchy data. She must finish booking in seconds, confirm where he is taken, and share the live trip with her brother abroad.
+4. User stories with acceptance criteria
+Twenty-four stories. Priority: P0 = launch blocker, P1 = required for v1 launch, P2 = fast follow after launch (not built in phases 1 to 8).
+ID
+As a
+I want to
+Acceptance criteria
+Pri
+US-01
+Patient
+book in 3 taps from home
+Pickup auto-filled from GPS; confirmed in 3 taps or fewer (Book, choose ambulance, Confirm); English and Kannada
+P0
+US-02
+Bystander
+book for someone else
+Toggle Booking for someone else; patient phone optional; tracking link goes to booker
+P1
+US-03
+Patient
+see the fare before confirming
+Fare range per category before confirm; final fare at trip end; final fare never above 125% of the range top unless the destination changed
+P0
+US-04
+Patient
+choose the right ambulance type
+Five categories with plain descriptions and fare; default suggested by a 2-question triage (conscious? chest pain or heavy bleeding?)
+P0
+US-05
+Patient
+schedule a planned transfer
+Date and time picker, at least 2 hours ahead, up to 7 days; reminder SMS and push 1 hour before
+P2
+US-06
+Patient
+get an automatic hospital suggestion
+Top 3 hospitals ranked by the score in the tech doc; one tap selects; closed ER hospitals greyed
+P0
+US-07
+Patient
+filter hospitals by specialty
+Filters: cardiac, stroke, trauma, burns, pediatric, maternity; hospitals without it greyed
+P1
+US-08
+Patient
+pick my own hospital
+Search by name; warning if the hospital lacks the needed specialty or its ER is closed
+P1
+US-09
+Patient
+watch the ambulance live
+Location refresh at most 5 s; ETA updates live; map shows route
+P0
+US-10
+Patient
+see driver, vehicle and crew
+After assignment: name, photo, plate, category, crew count, masked call button
+P0
+US-11
+Patient
+call the driver in-app
+Masked call through Exotel; Share my exact pin button sends coordinates to the driver
+P1
+US-12
+Family member
+get a tracking link
+SMS or WhatsApp share; link opens a live map page with no install or login; expires 30 minutes after trip completion
+P0
+US-13
+Patient
+add trusted contacts
+Up to 5 contacts; SMS on booking, pickup and hospital arrival
+P1
+US-14
+Family member
+see trip milestones
+Booked, driver assigned, arriving, picked up, en route, arrived
+P0
+US-15
+Driver
+get traffic-aware turn-by-turn navigation
+Route shown within 2 s of accepting; voice prompts in English or Kannada
+P0
+US-16
+Driver
+be alerted to closures or heavy traffic
+Alert banner on map with the suggested alternative route
+P1
+US-17
+Driver
+have the route recalculated automatically
+New route within 5 s of deviation beyond 80 m or blockage; new ETA pushed to patient, family and hospital
+P0
+US-18
+Hospital coordinator
+see incoming patients
+Inbound list with live ETA, category and patient summary; sound alert on new inbound
+P0
+US-19
+Hospital coordinator
+accept or redirect an inbound patient
+Hospital coordination starts in parallel with ambulance dispatch and must never delay driver assignment. The initial hospital alert enters pending_response. At 10 s without a response, send an urgent reminder to the hospital and alert operations. At 20 s, transition that alert to timed_out (never accepted), alert operations, write timeout and rerouting events to the audit trail, and immediately search for the next suitable hospital. A decline also triggers the next-hospital search. A redirect or newly proposed destination enters destination_change_pending_driver and is not applied until the assigned driver confirms it; confirmation records destination_confirmed. If the driver rejects the change or no suitable hospital remains, keep the proposed destination unapplied, move coordination to needs_ops_resolution, and alert operations. Silence never means acceptance.
+P1
+US-20
+Patient
+cancel with clear fee rules
+Free in first 60 s or before assignment; fee shown before cancel confirm
+P1
+US-21
+Super admin
+verify operators and drivers
+License, registration, insurance and equipment checklist approved before go-live; audit log kept
+P0
+US-22
+Driver
+be protected from distraction
+App blocks touch interaction only when detected speed is greater than 10 km/h; exactly 10 km/h does not trigger the lock. Voice navigation remains available. Do not claim the lock works until validated on actual devices; do not encourage driver interaction while moving.
+P0
+US-23
+Super admin
+edit the fare card and categories
+Changes versioned; apply to new bookings only
+P0
+US-24
+Operator
+manage vehicles and drivers
+Add vehicle, assign driver, see live status and earnings; new items need super admin approval
+P1
+5. Feature list
+The customer booking journey is C1 Home → C2 Ambulance Selection → C4 Confirmation → C5 Finding Ambulance → C6 Live Tracking → C7 Completion. C2 Continue (tap 2) navigates directly to C4 with the recommended hospital preselected. C4 shows the selected category, hospital, fare estimate, pickup and destination; Change hospital opens C3, and selecting a hospital in C3 returns to C4 with that choice. Confirm and book is the final booking action (tap 3). On confirmation, ambulance dispatch and hospital coordination start in parallel; hospital acceptance must never gate or delay driver matching. The hospital sees its inbound alert and, after assignment, the current driver/ETA as available. The driver accepts the dispatch offer, navigates to pickup, and after pickup follows the driver-confirmed hospital destination; family tracking and the remaining trip milestones proceed as specified.
+F1. Patient-friendly booking
+ID
+Requirement
+Pri
+F1.1
+One-screen booking, auto-detected pickup, prominent Book button
+P0
+F1.2
+Booking for self or someone else
+P1
+F1.3
+English and Kannada UI; large-text mode (130% scale)
+P0
+F1.4
+Upfront fare; pay by UPI, card, wallet or cash
+P0
+F1.5
+Phone OTP login; guest booking for emergencies (phone number only, OTP verified later in trip)
+P0
+F1.6
+Scheduled bookings
+P2
+F1.7
+Low-data mode (static map image, no photos) and SMS fallback booking: SMS BOOK <category> to the Rapid Lifeline number returns a call-back from operations
+P1
+F1.8
+Trip history, receipts, ratings
+P1
+F2. Ambulance categories
+Category
+Typical use
+Crew and equipment (final checklist)
+Pri
+BLS
+Stable patients, minor injuries, transfers
+Driver, attendant, first-aid kit, oxygen
+P0
+ALS
+Cardiac, stroke, serious trauma
+Paramedic, defibrillator, ventilator support, monitor
+P0
+ICU
+Critically ill, ventilated transfers
+Critical care nurse or doctor, ICU equipment
+P1
+Patient Transport
+Non-emergency, wheelchair or stretcher
+Driver, stretcher or wheelchair access
+P1
+Neonatal
+Newborns and infants
+Incubator, neonatal-trained crew
+P1
+ID
+Requirement
+Pri
+F2.1
+Category catalogue: description, icon, illustration, fare
+P0
+F2.2
+2-question triage that suggests BLS or ALS; never a diagnosis
+P1
+F2.3
+Vehicle tagged with category, equipment checklist, verification status
+P0
+F2.4
+Dispatch matches only the chosen category; an upgrade to a higher category is allowed after 30 s with no match, charged at the chosen category's fare
+P0
+F3. Smart Hospital Finder
+ID
+Requirement
+Pri
+F3.1
+Ranked list by ETA, ER open status, specialty fit, capacity
+P0
+F3.2
+Specialty filters
+P1
+F3.3
+Hospital-reported bed and ER status with freshness timestamp; older than 30 minutes is labelled Stale
+P1
+F3.4
+Partner hospitals are Verified; others show Unverified
+P0
+F3.5
+Accept or decline inbound; automatic search for the next suitable hospital on decline or timeout; destination changes require driver confirmation
+P1
+F3.6
+Pre-arrival alert with ETA, category and patient summary (only with patient consent)
+P0
+F4. Live GPS tracking
+ID
+Requirement
+Pri
+F4.1
+Live location at most 5 s old
+P0
+F4.2
+Live ETA updated with traffic
+P0
+F4.3
+Milestones and push notifications
+P0
+F4.4
+Driver, vehicle and crew card with masked calling
+P0
+F4.5
+Driver app buffers up to 500 location points offline and syncs on reconnect
+P1
+F5. Family tracking
+ID
+Requirement
+Pri
+F5.1
+Link by SMS, WhatsApp or copy; opens with no app or login
+P0
+F5.2
+Trusted contacts notified on booking, pickup, hospital arrival
+P1
+F5.3
+Link valid until 30 minutes after trip completion; patient can revoke any time
+P0
+F5.4
+Family view hides medical details
+P0
+F6. Smart traffic navigation
+ID
+Requirement
+Pri
+F6.1
+Turn-by-turn with live traffic
+P0
+F6.2
+Ambulance routing: Google traffic-optimal route; vehicles flagged large must not use routes that cross any polygon in the admin-maintained avoid-zones list (narrow lanes)
+P1
+F6.3
+Closure and incident alerts on route, polled every 60 s
+P1
+F7. Automatic route recalculation
+ID
+Requirement
+Pri
+F7.1
+Detect deviation (more than 80 m off route for 3 consecutive points) or blockage and recompute within 5 s
+P0
+F7.2
+Re-route when a faster route saves 2 minutes or more
+P1
+F7.3
+Push new ETA to patient, family and hospital automatically
+P0
+F7.4
+On hospital decline, propose the next hospital; driver confirms
+P1
+Supporting capabilities
+ID
+Requirement
+Pri
+S1
+Dispatch engine with accept timeout and auto-reassign
+P0
+S2
+Driver app: duty toggle, job accept, navigation, status, earnings
+P0
+S3
+Hospital dashboard: inbound list, accept or redirect, capacity update
+P0
+S4
+Super admin dashboard: onboarding, verification, live fleet map, fare card, support tools
+P0
+S5
+Operator dashboard: vehicles, drivers, earnings
+P1
+S6
+In-app safety: share trip, report issue, support call
+P1
+6. Experience rules
+These rules are fixed. Design and code must satisfy every one.
+Area
+Rule
+Booking
+3 taps or fewer from the home screen; pickup auto-detected; prominent Book button
+Service boundary
+Rapid Lifeline is a private ambulance coordination platform, not a government emergency response service; disclose this clearly and do not provide a direct public emergency-service call control
+Language and access
+English and Kannada; large-text mode; low-data mode
+Trust and clarity
+Fare shown before confirming; driver, vehicle and crew shown after assignment; stale or simulated data clearly labelled; prototype screens carry Prototype, test data
+Tracking
+Live map with ETA and trip milestones; family link opens with no install and no login
+Driver app
+Blocks interaction while the vehicle moves faster than 10 km/h; voice prompts for navigation
+Interfaces
+Customer app, driver app, operator dashboard, hospital dashboard, super admin dashboard
+Failure behaviour
+If the server is unreachable, the customer app clearly states that booking is unavailable, retains the entered booking details where possible, and provides retry and Rapid Lifeline support actions; it must not imply a booking or dispatch succeeded
+7. Business rules
+Rule
+Final decision
+Fare estimate
+Range = estimate to estimate × 1.15, where estimate = base + max(0, km − 5) × per-km, km = pickup to hospital by road; night surcharge 20% from 22:00 to 06:00 IST applies to the whole fare
+Final fare
+Computed from actual driven distance and waiting time; capped at 125% of the range top unless the rider changed the hospital
+Platform fee
+12% of the fare, deducted from the operator payout; cash trips settle weekly
+Dispatch radius
+Search 3 km, then 5 km, then 8 km, each step after 10 s without a match
+Offer timeout
+Each driver has 20 s to accept; up to 5 sequential offers; then status no_driver
+No driver found
+Rider sees No partner ambulance is currently available, with retry and Rapid Lifeline support actions; operations is alerted by dashboard and SMS
+Category upgrade
+After 30 s without a match, offer a higher category at the chosen category's fare
+Cancellation
+Free within 60 s of confirming or before assignment; after assignment ₹100; if the driver is within 500 m of pickup ₹250; no fee if the driver cancels or is more than 10 minutes late
+Guest booking
+Phone number only; OTP is verified during the trip; max 3 guest bookings per phone per day
+Hospital coordination
+Starts in parallel with driver dispatch; hospital acceptance never delays driver assignment. Each alert is pending_response until explicit acceptance, decline, redirect or timeout. At 10 s without a response, send an urgent hospital reminder and alert operations. At 20 s, mark the alert timed_out (never accepted), alert operations, record timeout and rerouting events in the audit trail, and immediately search for the next suitable hospital. A decline triggers the same next-hospital search. Any redirected or newly proposed destination remains pending until the assigned driver confirms it; on rejection or no suitable alternative, alert operations and leave the destination unchanged pending resolution. Silence is never acceptance. Record booking.confirmed, dispatch.search_started, dispatch.assigned, dispatch.no_driver, hospital.alerted, hospital.reminder_sent, hospital.accepted, hospital.declined, hospital.redirected, hospital.timed_out, hospital.alternative_search_started, hospital.alternative_found, hospital.destination_change_proposed, hospital.destination_change_confirmed, hospital.destination_change_rejected and hospital.needs_ops_resolution as applicable. Retry notification failures and escalate them to operations without blocking dispatch.
+Medical disclaimer
+Shown at first launch and in settings: Rapid Lifeline is a private ambulance coordination platform, not a government emergency response service; it does not provide medical advice or replace public emergency services
+Hospital data freshness
+Capacity older than 30 minutes is labelled Stale and ignored in ranking
+Tracking link
+One link per trip; expires 30 minutes after completion; revocable by the booker
+Patient summary
+Shared with a hospital only if the booker ticks consent; family never sees it
+Ratings
+Rider rates driver 1 to 5 after completion; driver below 4.0 average over 20 trips is reviewed by admin
+Data retention
+Location trail 12 months; patient summary 90 days; documents while the driver is active plus 12 months
+8. Non-functional requirements
+Area
+Requirement
+Target
+Performance
+Quote and hospital suggestions API
+P95 at most 1.0 s
+Performance
+Booking confirmation API
+P95 at most 1.5 s
+Performance
+Driver location to rider screen, end to end
+P95 at most 3 s
+Performance
+Customer app cold start on a mid-range Android phone (3 GB RAM)
+At most 3 s
+Performance
+Public tracking page first load on 4G
+P75 at most 3 s, page weight at most 300 KB before map
+Performance
+Customer app install size
+At most 50 MB
+Reliability
+Availability of booking and tracking endpoints
+99.9% per month
+Reliability
+Recovery point and time objectives
+RPO 5 min, RTO 60 min
+Scale
+Concurrent active trips at launch, designed headroom
+1,000 trips, tested to 10,000 location updates per second
+Low data
+Low-data mode screen payload
+At most 100 KB per screen, static map image instead of tiles, no driver photo
+Compatibility
+Mobile
+Android 8.0 (API 26) and up; iOS 15 and up
+Compatibility
+Web
+Last 2 versions of Chrome, Safari, Edge, Firefox
+Accessibility
+Standard
+WCAG 2.1 AA; 48 dp tap targets; screen-reader labels on all controls
+Security
+Transport and storage
+TLS 1.2 or higher; AES-256 encryption at rest; secrets in AWS Secrets Manager
+Security
+OTP
+6 digits, valid 5 min, 5 attempts, then 15 min lock
+Security
+Access control
+Role-based access; hospital staff see only their hospital's trips; every admin action audit-logged
+Privacy
+Law
+India Digital Personal Data Protection Act 2023: consent screen, data export and deletion on request within 30 days
+Privacy
+Phone numbers
+Masked in driver and hospital views; masked calling for calls
+Observability
+Alerts
+Page on-call when error rate exceeds 2% for 5 min or dispatch success falls below 90% for 15 min
+Localisation
+Languages
+English and Kannada; dates DD MMM YYYY, 24-hour time; currency ₹1,234
+9. Success metrics matrix
+Targets are measured over the first 90 days after the Bengaluru pilot launch unless stated. Each metric has one owner and one data source so it can be built into the analytics from day one.
+Goal
+Metric
+Definition
+Target
+Source
+G1
+Time to assignment
+Booking confirmed to driver accepted
+Median 90 s or less; P90 3 min or less
+trips timestamps
+G1
+Time to arrival
+Booking confirmed to ambulance at pickup
+Median 12 min or less; P90 20 min or less
+trips, trip_events
+G1
+Dispatch success
+Bookings assigned within 3 min
+95% or more
+trips
+G1
+ETA accuracy
+Absolute gap between ETA at assignment and actual arrival
+Median 2 min or less
+routes, trips
+G1
+Booking speed
+App open to Confirm tapped, median
+45 s or less
+PostHog events
+G1
+Taps to book
+Taps from Home to Confirm
+3 or fewer for 90% of bookings
+PostHog events
+G1
+Booking completion
+Book tapped to booking confirmed
+85% or more
+PostHog funnel
+G2
+Hospital suggestion acceptance
+Bookings that keep the preselected hospital
+70% or more
+bookings
+G3
+Family share rate
+Bookings where a tracking link is sent or a contact notified
+60% or more
+tracking_links, notifications
+G3
+Tracking page speed
+First load on 4G, P75
+3 s or less
+Real-user monitoring
+G3
+Location freshness
+Location updates reaching the rider within 5 s
+95% or more
+Server logs
+G4
+Re-route latency
+Deviation detected to new route pushed, P95
+5 s or less
+routes timestamps
+G5
+Hospital alert delivery
+Pre-arrival alerts delivered
+98% or more
+hospital_alerts
+G5
+Alert lead time
+Alert sent at least 5 min before arrival, for trips over 10 min
+80% or more
+hospital_alerts, trips
+Supply
+Driver acceptance rate
+Offers accepted
+80% or more
+dispatch_offers
+Quality
+Customer rating
+Average rating
+4.5 or higher
+ratings
+Quality
+Crash-free sessions
+Mobile apps
+99.5% or more
+Sentry
+Reliability
+Availability
+Booking and tracking endpoints, monthly
+99.9%
+CloudWatch
+Scale
+Pilot volume
+Completed trips; approved vehicles; verified partner hospitals
+500 trips; 100 vehicles; 25 hospitals
+Database
+The pilot is a success when every G1 to G5 metric meets its target for 4 consecutive weeks.
+10. Release phases and exit criteria
+Build one phase at a time. A phase is done only when every exit criterion is met and the owner confirms before the next phase starts. Weeks are cumulative from project start and assume one coding agent working with human review.
+Phase
+Scope
+Weeks
+Exit criteria
+0. Foundation
+Monorepo, CI, Terraform base, Postgres and Redis, OTP auth, roles, i18n skeleton
+1 to 2
+Login works on both apps; CI green; staging deployed
+1. Customer app UI/UX
+Screens C1 to C7 as clickable prototype with test data and the Prototype, test data label; web home page
+3 to 5
+Owner approves the flow; C1 → C2 → C4 three-tap primary path demonstrated; hospital coordination is independent of dispatch
+2. Booking and dispatch backend
+Categories, fare card, quotes, bookings, dispatch engine, trip state machine
+6 to 9
+A booking is assigned to a test driver within 90 s in staging; cancel fee rules pass tests
+3. Driver app
+Duty toggle, offers, navigation, status buttons, motion lock, voice prompts, offline buffer
+10 to 13
+Driver completes a full test trip; actual-device validation confirms interaction is blocked only above 10 km/h before any operational claim, and voice guidance is tested separately
+4. Tracking and family
+Live map, ETA, milestones, masked call, tracking link page, trusted contacts
+14 to 16
+Location reaches rider in 3 s P95; link opens without login in 3 s on 4G
+5. Hospital finder and dashboard
+Hospital directory, ranking, filters, pre-arrival alerts, accept or redirect, hospital dashboard
+17 to 19
+Alert delivered in 5 s; decline re-matches and driver confirms
+6. Navigation and re-route
+Traffic-aware routes, deviation detection, faster-route check, closure alerts
+20 to 22
+Re-route in 5 s P95 in simulated deviation tests
+7. Payments, operator and admin
+Razorpay, cash settlement, receipts, operator dashboard, super admin dashboard, verification
+23 to 26
+Operator onboarded and verified end to end; payments reconcile
+8. Hardening and pilot
+Load test, security review, DPDP review, store submissions, pilot in Bengaluru
+27 to 30
+All section 8 targets met in load test; store apps approved; pilot starts
+11. Risks and mitigations
+Risk
+Likelihood
+Impact
+Mitigation built into v1
+Too few ambulances in the pilot, long waits
+Medium
+High
+Sign operators before launch (100 vehicle target); dispatch radius widening; category upgrade; operations alert on no_driver
+Hospitals do not keep capacity data fresh
+High
+Medium
+Stale label after 30 min, ignored in ranking; ER open flag is the only hard filter
+Poor mobile data in the field
+High
+High
+Low-data mode, offline buffer, SMS fallback, freshness banners, clear service-unavailable messaging and retry/support path
+Misuse by prank or fake bookings
+Medium
+Medium
+Guest limit 3 per day, OTP verification during trip, driver can flag No patient, admin review
+Privacy breach of patient details
+Low
+High
+Consent-gated summary, role-based access, masked phones, encryption, audit log
+Driver distraction
+Medium
+High
+Motion lock above 10 km/h, voice prompts
+Google Maps cost or quota overrun
+Medium
+Medium
+Cache hospital ETAs 30 s, one traffic route per 60 s per active leg, billing alerts
+Medical liability from triage suggestion
+Low
+High
+Triage only suggests a category, shows disclaimer, always allows changing category; no diagnosis text
+Regulatory change on ambulance standards
+Low
+Medium
+Equipment checklist stored as data, editable by super admin
+12. Out of v1 and decision log
+Out of v1 (not to be built)
+• Mortuary or freezer category, air ambulance, inter-city transfers.
+• Scheduled bookings (US-05, P2) and dark mode.
+• City traffic-signal integration.
+• WhatsApp Business API messaging (WhatsApp is used only through a share link).
+• Insurance, billing disputes, telemedicine.
+• Any city other than Bengaluru, any language other than English and Kannada.
+Decision log
+#
+Decision
+Final answer
+D1
+Product name
+Rapid Lifeline
+D2
+Launch city
+Bengaluru
+D3
+Regional language
+Kannada
+D4
+Ambulance categories
+BLS, ALS, ICU, Patient Transport, Neonatal
+D5
+Fare model
+Base plus per-km, 20% night surcharge, fare card in database
+D6
+Payments
+Razorpay plus cash
+D7
+Maps and routing
+Google Maps Platform
+D8
+Tracking link expiry
+30 minutes after trip completion
+D9
+Driver motion lock
+Above 10 km/h
+D10
+Hospital response window
+Parallel to dispatch; urgent reminder and operations alert at 10 s; timed_out at 20 s and never accepted; timeout and rerouting audit events; immediate next-suitable-hospital search; destination change requires driver confirmation
+D11
+Interfaces
+Five: customer, driver, operator, hospital, super admin
+D12
+Build method
+One phase at a time with owner confirmation between phases
+D13
+Companion documents
+Tech Stack and Architecture; UI/UX Visual Design Guide
+Unresolved items (kept open pending validation)
+• Cancellation fee collection mechanism (ledger balance vs gateway collection for cash/guest).
+• Better Auth compatibility evaluation vs planned NestJS JWT/OTP auth.
+• Production avoid-zone routing and manual resolution workflows.
+
+13. Change history
+v1.1 — 10 Nov 2026 — Approved alignment: removed direct public emergency-service call controls and clarified Rapid Lifeline's private-service boundary; finalized C1 → C2 → C4 → C5 → C6 → C7 with C2 → C4, recommended hospital preselection and C3 return-to-confirmation; established independent parallel dispatch and hospital coordination with 10 s reminder, 20 s timeout, explicit non-acceptance, driver-confirmed destination changes and audit events. Pricing, cancellation and dispatch matching rules remain unchanged.
